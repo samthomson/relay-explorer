@@ -38,16 +38,20 @@ const Index = () => {
     description: 'Simple Nostr relay explorer to view events from any relay',
   });
 
-  const [relayUrl, setRelayUrl] = useState('');
+  // Load from localStorage
+  const [relayUrl, setRelayUrl] = useState(() => localStorage.getItem('relay-explorer:url') || '');
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [events, setEvents] = useState<NostrEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<NostrEvent | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Advanced filter states
-  const [authorNpub, setAuthorNpub] = useState('');
-  const [selectedKinds, setSelectedKinds] = useState<number[]>([]);
+  // Advanced filter states with localStorage
+  const [authorNpub, setAuthorNpub] = useState(() => localStorage.getItem('relay-explorer:author') || '');
+  const [selectedKinds, setSelectedKinds] = useState<number[]>(() => {
+    const stored = localStorage.getItem('relay-explorer:kinds');
+    return stored ? JSON.parse(stored) : [];
+  });
   const [customKind, setCustomKind] = useState('');
   const [kindSearchQuery, setKindSearchQuery] = useState('');
   const [showKindDropdown, setShowKindDropdown] = useState(false);
@@ -55,6 +59,23 @@ const Index = () => {
   const isValidUrl = relayUrl.length > 0;
   const isConnected = connectionState === 'connected';
   const isConnecting = connectionState === 'connecting';
+
+  // Persist to localStorage when values change
+  useEffect(() => {
+    if (relayUrl) {
+      localStorage.setItem('relay-explorer:url', relayUrl);
+    }
+  }, [relayUrl]);
+
+  useEffect(() => {
+    if (authorNpub) {
+      localStorage.setItem('relay-explorer:author', authorNpub);
+    }
+  }, [authorNpub]);
+
+  useEffect(() => {
+    localStorage.setItem('relay-explorer:kinds', JSON.stringify(selectedKinds));
+  }, [selectedKinds]);
 
   useEffect(() => {
     return () => {
@@ -145,6 +166,20 @@ const Index = () => {
     setWs(websocket);
   };
 
+  const handleResubscribe = () => {
+    if (ws && isConnected) {
+      // Close existing subscription
+      ws.send(JSON.stringify(['CLOSE', 'all-events']));
+      // Clear events
+      setEvents([]);
+      setSelectedEvent(null);
+      // Send new subscription with updated filters
+      const filter = buildFilter();
+      const subscription = JSON.stringify(['REQ', 'all-events', filter]);
+      ws.send(subscription);
+    }
+  };
+
   const handleRelayUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRelayUrl(e.target.value);
   };
@@ -152,6 +187,9 @@ const Index = () => {
   const handleAddKind = (kind: number) => {
     if (!selectedKinds.includes(kind)) {
       setSelectedKinds([...selectedKinds, kind]);
+      if (isConnected) {
+        setTimeout(handleResubscribe, 100);
+      }
     }
     setKindSearchQuery('');
     setShowKindDropdown(false);
@@ -159,6 +197,9 @@ const Index = () => {
 
   const handleRemoveKind = (kind: number) => {
     setSelectedKinds(selectedKinds.filter(k => k !== kind));
+    if (isConnected) {
+      setTimeout(handleResubscribe, 100);
+    }
   };
 
   const handleAddCustomKind = () => {
@@ -166,6 +207,16 @@ const Index = () => {
     if (!isNaN(kind) && kind >= 0 && !selectedKinds.includes(kind)) {
       setSelectedKinds([...selectedKinds, kind]);
       setCustomKind('');
+      if (isConnected) {
+        setTimeout(handleResubscribe, 100);
+      }
+    }
+  };
+
+  const handleAuthorChange = (value: string) => {
+    setAuthorNpub(value);
+    if (isConnected) {
+      setTimeout(handleResubscribe, 100);
     }
   };
 
@@ -214,6 +265,11 @@ const Index = () => {
                 placeholder="relay.ditto.pub"
                 value={relayUrl}
                 onChange={handleRelayUrlChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && isValidUrl && !isConnected && !isConnecting) {
+                    handleConnect();
+                  }
+                }}
                 disabled={isConnected || isConnecting}
                 className="pl-16 h-10 bg-neutral-950 border-neutral-700 font-mono text-sm text-neutral-100"
               />
@@ -232,11 +288,16 @@ const Index = () => {
           <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
             <CollapsibleTrigger asChild>
               <button
-                className="flex items-center gap-2 text-xs font-mono text-neutral-400 hover:text-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isConnected || isConnecting}
+                className="flex items-center gap-2 text-xs font-mono text-neutral-400 hover:text-neutral-300 transition-colors"
               >
                 <span className="uppercase tracking-wider">Filters</span>
                 <ChevronDown className={`h-3 w-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                {isConnected && (selectedKinds.length > 0 || authorNpub) && (
+                  <span className="text-neutral-600">·</span>
+                )}
+                {isConnected && (selectedKinds.length > 0 || authorNpub) && (
+                  <span className="text-neutral-600 text-xs">live update enabled</span>
+                )}
               </button>
             </CollapsibleTrigger>
             
@@ -252,7 +313,7 @@ const Index = () => {
                     type="text"
                     placeholder="npub1..."
                     value={authorNpub}
-                    onChange={(e) => setAuthorNpub(e.target.value)}
+                    onChange={(e) => handleAuthorChange(e.target.value)}
                     className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
                   />
                 </div>
