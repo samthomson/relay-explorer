@@ -190,23 +190,23 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-neutral-950">
       <div className="container mx-auto p-6">
         {/* Header */}
-        <div className="mb-6 pb-4 border-b border-slate-800">
-          <h1 className="text-2xl font-mono font-semibold text-slate-100 mb-1">
+        <div className="mb-6 pb-4 border-b border-neutral-800">
+          <h1 className="text-2xl font-mono font-semibold text-neutral-100 mb-1">
             relay-explorer
           </h1>
-          <p className="text-sm text-slate-500 font-mono">
+          <p className="text-sm text-neutral-500 font-mono">
             WebSocket event inspector for Nostr relays
           </p>
         </div>
 
         {/* Connection Panel */}
-        <div className="mb-6 bg-slate-900 border border-slate-800 rounded-lg p-4">
+        <div className="mb-6 bg-neutral-900 border border-neutral-800 rounded-lg p-4">
           <div className="flex gap-3 mb-3">
             <div className="flex-1 relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-mono">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm font-mono pointer-events-none">
                 wss://
               </span>
               <Input
@@ -215,7 +215,7 @@ const Index = () => {
                 value={relayUrl}
                 onChange={handleRelayUrlChange}
                 disabled={isConnected || isConnecting}
-                className="pl-16 h-10 bg-slate-950 border-slate-700 font-mono text-sm focus-visible:ring-violet-500"
+                className="pl-16 h-10 bg-neutral-950 border-neutral-700 font-mono text-sm text-neutral-100"
               />
             </div>
             <Button
@@ -232,7 +232,7 @@ const Index = () => {
           <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
             <CollapsibleTrigger asChild>
               <button
-                className="flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 text-xs font-mono text-neutral-400 hover:text-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isConnected || isConnecting}
               >
                 <span className="uppercase tracking-wider">Filters</span>
@@ -240,33 +240,33 @@ const Index = () => {
               </button>
             </CollapsibleTrigger>
             
-            <CollapsibleContent className="mt-3 pt-3 border-t border-slate-800">
-              <div className="grid grid-cols-2 gap-3">
+            <CollapsibleContent className="mt-3 pt-3 border-t border-neutral-800">
+              <div className="grid grid-cols-2 gap-2">
                 {/* Author Filter */}
-                <div className="space-y-1.5">
-                  <label htmlFor="author-npub" className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                <div className="space-y-1">
+                  <label htmlFor="author-npub" className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
                     Authors
                   </label>
                   <Input
                     id="author-npub"
                     type="text"
-                    placeholder="npub1... or nprofile1..."
+                    placeholder="npub1..."
                     value={authorNpub}
                     onChange={(e) => setAuthorNpub(e.target.value)}
-                    className="h-9 bg-slate-950 border-slate-700 font-mono text-xs focus-visible:ring-violet-500"
+                    className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
                   />
                 </div>
 
                 {/* Kinds Filter */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                <div className="space-y-1">
+                  <label className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
                     Kinds
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <div className="flex-1 relative">
                       <Input
                         type="text"
-                        placeholder="Search or add custom..."
+                        placeholder="Search..."
                         value={kindSearchQuery}
                         onChange={(e) => {
                           setKindSearchQuery(e.target.value);
@@ -274,18 +274,18 @@ const Index = () => {
                         }}
                         onFocus={() => setShowKindDropdown(true)}
                         onBlur={() => setTimeout(() => setShowKindDropdown(false), 200)}
-                        className="h-9 bg-slate-950 border-slate-700 font-mono text-xs focus-visible:ring-violet-500"
+                        className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
                       />
                       {showKindDropdown && kindSearchQuery && filteredCommonKinds.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-slate-900 border border-slate-700 rounded-md shadow-xl max-h-48 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-1 bg-neutral-900 border border-neutral-700 rounded-md shadow-xl max-h-48 overflow-y-auto">
                           {filteredCommonKinds.map((kind) => (
                             <button
                               key={kind.value}
                               onClick={() => handleAddKind(kind.value)}
-                              className="w-full text-left px-3 py-2 hover:bg-slate-800 text-xs font-mono flex items-center justify-between text-slate-300"
+                              className="w-full text-left px-3 py-2 hover:bg-neutral-800 text-xs font-mono flex items-center justify-between text-neutral-300"
                             >
                               <span>{kind.label}</span>
-                              <span className="text-slate-500">{kind.value}</span>
+                              <span className="text-neutral-500">{kind.value}</span>
                             </button>
                           ))}
                         </div>
@@ -294,11 +294,11 @@ const Index = () => {
 
                     <Input
                       type="number"
-                      placeholder="###"
+                      placeholder="#"
                       value={customKind}
                       onChange={(e) => setCustomKind(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddCustomKind()}
-                      className="h-9 w-16 bg-slate-950 border-slate-700 font-mono text-xs text-center focus-visible:ring-violet-500"
+                      className="h-8 w-12 bg-neutral-950 border-neutral-700 font-mono text-xs text-center text-neutral-100"
                       min="0"
                     />
                     <Button
@@ -306,7 +306,7 @@ const Index = () => {
                       disabled={!customKind || isNaN(parseInt(customKind))}
                       size="sm"
                       variant="outline"
-                      className="h-9 px-3 font-mono text-xs border-slate-700"
+                      className="h-8 px-2 font-mono text-xs border-neutral-700"
                     >
                       +
                     </Button>
@@ -316,17 +316,17 @@ const Index = () => {
 
               {/* Selected Kinds Pills */}
               {selectedKinds.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-800">
+                <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-neutral-800">
                   {selectedKinds.sort((a, b) => a - b).map((kind) => (
                     <button
                       key={kind}
                       onClick={() => handleRemoveKind(kind)}
-                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs font-mono text-slate-300 transition-colors"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-xs font-mono text-neutral-300 transition-colors"
                     >
-                      <span className="text-slate-500">{kind}</span>
-                      <span className="text-slate-400">·</span>
+                      <span className="text-neutral-500">{kind}</span>
+                      <span className="text-neutral-600">·</span>
                       <span>{COMMON_KINDS.find(k => k.value === kind)?.label || 'Custom'}</span>
-                      <X className="h-3 w-3 ml-1 text-slate-500" />
+                      <X className="h-3 w-3 ml-0.5 text-neutral-500" />
                     </button>
                   ))}
                 </div>
@@ -339,14 +339,14 @@ const Index = () => {
         {(isConnected || isConnecting) && (
           <div className="grid grid-cols-13 gap-4">
             {/* Left Column - Events List (5 parts) */}
-            <div className="col-span-5 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
+            <div className="col-span-5 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
               <div className="flex flex-col h-full">
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+                <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-mono text-xs uppercase tracking-wider text-slate-400">
+                    <h2 className="font-mono text-xs uppercase tracking-wider text-neutral-400">
                       Events
                     </h2>
-                    <span className="font-mono text-xs text-slate-500">
+                    <span className="font-mono text-xs text-neutral-500">
                       {events.length}
                     </span>
                   </div>
@@ -354,26 +354,26 @@ const Index = () => {
                 <div className="overflow-y-auto flex-1">
                   {events.length === 0 ? (
                     <div className="p-8 text-center">
-                      <p className="text-xs font-mono text-slate-600">Listening for events...</p>
+                      <p className="text-xs font-mono text-neutral-600">Listening for events...</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-slate-800">
+                    <div className="divide-y divide-neutral-800">
                       {events.map((event) => (
                         <button
                           key={event.id}
                           onClick={() => setSelectedEvent(event)}
-                          className={`w-full text-left px-4 py-3 hover:bg-slate-800/50 transition-colors ${
+                          className={`w-full text-left px-4 py-3 hover:bg-neutral-800/50 transition-colors ${
                             selectedEvent?.id === event.id
-                              ? 'bg-violet-950/30 border-l-2 border-violet-500'
+                              ? 'bg-neutral-800 border-l-2 border-neutral-500'
                               : ''
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
-                            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400">
-                              <span className="text-slate-600">kind</span>
-                              <span className="text-slate-500">{event.kind}</span>
+                            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-neutral-400">
+                              <span className="text-neutral-600">kind</span>
+                              <span className="text-neutral-500">{event.kind}</span>
                             </span>
-                            <span className="text-xs font-mono text-slate-600">
+                            <span className="text-xs font-mono text-neutral-600">
                               {new Date(event.created_at * 1000).toLocaleTimeString('en-US', { 
                                 hour12: false,
                                 hour: '2-digit',
@@ -382,11 +382,11 @@ const Index = () => {
                               })}
                             </span>
                           </div>
-                          <div className="text-xs font-mono text-slate-500 truncate mb-1">
+                          <div className="text-xs font-mono text-neutral-500 truncate mb-1">
                             {event.id.substring(0, 32)}...
                           </div>
                           {event.content && (
-                            <div className="text-xs text-slate-400 truncate">
+                            <div className="text-xs text-neutral-400 truncate">
                               {event.content.substring(0, 60)}
                               {event.content.length > 60 ? '...' : ''}
                             </div>
@@ -400,21 +400,21 @@ const Index = () => {
             </div>
 
             {/* Right Column - Event Details (8 parts) */}
-            <div className="col-span-8 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
+            <div className="col-span-8 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
               <div className="flex flex-col h-full">
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
-                  <h2 className="font-mono text-xs uppercase tracking-wider text-slate-400">
+                <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur">
+                  <h2 className="font-mono text-xs uppercase tracking-wider text-neutral-400">
                     Event Inspector
                   </h2>
                 </div>
                 <div className="overflow-y-auto flex-1 p-4">
                   {selectedEvent ? (
-                    <pre className="text-xs font-mono text-slate-300 leading-relaxed">
+                    <pre className="text-xs font-mono text-neutral-300 leading-relaxed">
                       {JSON.stringify(selectedEvent, null, 2)}
                     </pre>
                   ) : (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-xs font-mono text-slate-600">Select an event to inspect</p>
+                      <p className="text-xs font-mono text-neutral-600">Select an event to inspect</p>
                     </div>
                   )}
                 </div>
@@ -429,7 +429,7 @@ const Index = () => {
             href="https://shakespeare.diy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-mono text-slate-600 hover:text-slate-500 transition-colors"
+            className="text-xs font-mono text-neutral-600 hover:text-neutral-500 transition-colors"
           >
             built with shakespeare
           </a>
