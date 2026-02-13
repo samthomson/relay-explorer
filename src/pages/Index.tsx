@@ -190,199 +190,205 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="container mx-auto p-8">
+    <div className="min-h-screen bg-slate-950">
+      <div className="container mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-            Relay Note Explorer
+        <div className="mb-6 pb-4 border-b border-slate-800">
+          <h1 className="text-2xl font-mono font-semibold text-slate-100 mb-1">
+            relay-explorer
           </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Connect to any Nostr relay and explore events
+          <p className="text-sm text-slate-500 font-mono">
+            WebSocket event inspector for Nostr relays
           </p>
         </div>
 
-        {/* Connection Input */}
-        <div className="mb-6">
-          <div className="flex gap-3">
-            <Input
-              type="text"
-              placeholder="relay.ditto.pub"
-              value={relayUrl}
-              onChange={handleRelayUrlChange}
-              disabled={isConnected || isConnecting}
-              className="flex-1 text-lg h-12"
-            />
+        {/* Connection Panel */}
+        <div className="mb-6 bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <div className="flex gap-3 mb-3">
+            <div className="flex-1 relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-mono">
+                wss://
+              </span>
+              <Input
+                type="text"
+                placeholder="relay.ditto.pub"
+                value={relayUrl}
+                onChange={handleRelayUrlChange}
+                disabled={isConnected || isConnecting}
+                className="pl-16 h-10 bg-slate-950 border-slate-700 font-mono text-sm focus-visible:ring-violet-500"
+              />
+            </div>
             <Button
               onClick={handleConnect}
               disabled={!isValidUrl && !isConnected && !isConnecting}
-              className="h-12 px-8 text-base"
+              className="h-10 px-6 font-mono text-sm"
               variant={isConnected ? 'destructive' : 'default'}
             >
-              {isConnecting ? 'Connecting...' : isConnected ? 'Disconnect' : 'Connect'}
+              {isConnecting ? 'CONNECTING...' : isConnected ? 'DISCONNECT' : 'CONNECT'}
             </Button>
           </div>
 
-          {/* Advanced Options */}
-          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="mt-4">
+          {/* Advanced Filters */}
+          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
             <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-sm text-slate-600 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400"
+              <button
+                className="flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isConnected || isConnecting}
               >
-                Advanced Options
-                <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-              </Button>
+                <span className="uppercase tracking-wider">Filters</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+              </button>
             </CollapsibleTrigger>
             
-            <CollapsibleContent className="mt-4">
-              <Card className="bg-slate-50/50 dark:bg-slate-900/50">
-                <CardContent className="p-4 space-y-4">
-                  {/* Author Filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="author-npub" className="text-sm font-medium">
-                      Author (npub)
-                    </Label>
-                    <Input
-                      id="author-npub"
-                      type="text"
-                      placeholder="npub1... or nprofile1..."
-                      value={authorNpub}
-                      onChange={(e) => setAuthorNpub(e.target.value)}
-                      className="h-10"
-                    />
-                  </div>
+            <CollapsibleContent className="mt-3 pt-3 border-t border-slate-800">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Author Filter */}
+                <div className="space-y-1.5">
+                  <label htmlFor="author-npub" className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                    Authors
+                  </label>
+                  <Input
+                    id="author-npub"
+                    type="text"
+                    placeholder="npub1... or nprofile1..."
+                    value={authorNpub}
+                    onChange={(e) => setAuthorNpub(e.target.value)}
+                    className="h-9 bg-slate-950 border-slate-700 font-mono text-xs focus-visible:ring-violet-500"
+                  />
+                </div>
 
-                  {/* Kinds Filter */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Event Kinds</Label>
-                    
-                    {/* Selected Kinds */}
-                    {selectedKinds.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {selectedKinds.map((kind) => (
-                          <Badge
-                            key={kind}
-                            variant="secondary"
-                            className="pl-2 pr-1 py-1 gap-1"
-                          >
-                            {COMMON_KINDS.find(k => k.value === kind)?.label || `Kind ${kind}`}
+                {/* Kinds Filter */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+                    Kinds
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Input
+                        type="text"
+                        placeholder="Search or add custom..."
+                        value={kindSearchQuery}
+                        onChange={(e) => {
+                          setKindSearchQuery(e.target.value);
+                          setShowKindDropdown(true);
+                        }}
+                        onFocus={() => setShowKindDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowKindDropdown(false), 200)}
+                        className="h-9 bg-slate-950 border-slate-700 font-mono text-xs focus-visible:ring-violet-500"
+                      />
+                      {showKindDropdown && kindSearchQuery && filteredCommonKinds.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-slate-900 border border-slate-700 rounded-md shadow-xl max-h-48 overflow-y-auto">
+                          {filteredCommonKinds.map((kind) => (
                             <button
-                              onClick={() => handleRemoveKind(kind)}
-                              className="ml-1 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-full p-0.5"
+                              key={kind.value}
+                              onClick={() => handleAddKind(kind.value)}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-800 text-xs font-mono flex items-center justify-between text-slate-300"
                             >
-                              <X className="h-3 w-3" />
+                              <span>{kind.label}</span>
+                              <span className="text-slate-500">{kind.value}</span>
                             </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      {/* Kind Typeahead */}
-                      <div className="flex-1 relative">
-                        <Input
-                          type="text"
-                          placeholder="Search common kinds..."
-                          value={kindSearchQuery}
-                          onChange={(e) => {
-                            setKindSearchQuery(e.target.value);
-                            setShowKindDropdown(true);
-                          }}
-                          onFocus={() => setShowKindDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowKindDropdown(false), 200)}
-                          className="h-10"
-                        />
-                        {showKindDropdown && kindSearchQuery && filteredCommonKinds.length > 0 && (
-                          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                            {filteredCommonKinds.map((kind) => (
-                              <button
-                                key={kind.value}
-                                onClick={() => handleAddKind(kind.value)}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm flex items-center justify-between"
-                              >
-                                <span>{kind.label}</span>
-                                <span className="text-xs text-slate-500 font-mono">{kind.value}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Custom Kind Input */}
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          placeholder="Custom kind"
-                          value={customKind}
-                          onChange={(e) => setCustomKind(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddCustomKind()}
-                          className="h-10 w-32"
-                          min="0"
-                        />
-                        <Button
-                          onClick={handleAddCustomKind}
-                          disabled={!customKind || isNaN(parseInt(customKind))}
-                          size="sm"
-                          variant="outline"
-                          className="h-10"
-                        >
-                          Add
-                        </Button>
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    <Input
+                      type="number"
+                      placeholder="###"
+                      value={customKind}
+                      onChange={(e) => setCustomKind(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomKind()}
+                      className="h-9 w-16 bg-slate-950 border-slate-700 font-mono text-xs text-center focus-visible:ring-violet-500"
+                      min="0"
+                    />
+                    <Button
+                      onClick={handleAddCustomKind}
+                      disabled={!customKind || isNaN(parseInt(customKind))}
+                      size="sm"
+                      variant="outline"
+                      className="h-9 px-3 font-mono text-xs border-slate-700"
+                    >
+                      +
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+
+              {/* Selected Kinds Pills */}
+              {selectedKinds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-800">
+                  {selectedKinds.sort((a, b) => a - b).map((kind) => (
+                    <button
+                      key={kind}
+                      onClick={() => handleRemoveKind(kind)}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs font-mono text-slate-300 transition-colors"
+                    >
+                      <span className="text-slate-500">{kind}</span>
+                      <span className="text-slate-400">·</span>
+                      <span>{COMMON_KINDS.find(k => k.value === kind)?.label || 'Custom'}</span>
+                      <X className="h-3 w-3 ml-1 text-slate-500" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
         </div>
 
         {/* Events Display - Fibonacci ratio columns (5:8) */}
         {(isConnected || isConnecting) && (
-          <div className="grid grid-cols-13 gap-6">
+          <div className="grid grid-cols-13 gap-4">
             {/* Left Column - Events List (5 parts) */}
-            <Card className="col-span-5 h-[calc(100vh-280px)]">
-              <CardContent className="p-0 h-full flex flex-col">
-                <div className="p-4 border-b bg-slate-50 dark:bg-slate-900/50">
-                  <h2 className="font-semibold text-lg">
-                    Events ({events.length})
-                  </h2>
+            <div className="col-span-5 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
+              <div className="flex flex-col h-full">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-mono text-xs uppercase tracking-wider text-slate-400">
+                      Events
+                    </h2>
+                    <span className="font-mono text-xs text-slate-500">
+                      {events.length}
+                    </span>
+                  </div>
                 </div>
                 <div className="overflow-y-auto flex-1">
                   {events.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500">
-                      <p>Waiting for events...</p>
+                    <div className="p-8 text-center">
+                      <p className="text-xs font-mono text-slate-600">Listening for events...</p>
                     </div>
                   ) : (
-                    <div className="divide-y">
+                    <div className="divide-y divide-slate-800">
                       {events.map((event) => (
                         <button
                           key={event.id}
                           onClick={() => setSelectedEvent(event)}
-                          className={`w-full text-left p-4 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+                          className={`w-full text-left px-4 py-3 hover:bg-slate-800/50 transition-colors ${
                             selectedEvent?.id === event.id
-                              ? 'bg-violet-50 dark:bg-violet-950/30 border-l-4 border-violet-600'
+                              ? 'bg-violet-950/30 border-l-2 border-violet-500'
                               : ''
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <span className="font-mono text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">
-                              {getKindName(event.kind)}
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400">
+                              <span className="text-slate-600">kind</span>
+                              <span className="text-slate-500">{event.kind}</span>
                             </span>
-                            <span className="text-xs text-slate-500">
-                              {new Date(event.created_at * 1000).toLocaleTimeString()}
+                            <span className="text-xs font-mono text-slate-600">
+                              {new Date(event.created_at * 1000).toLocaleTimeString('en-US', { 
+                                hour12: false,
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                              })}
                             </span>
                           </div>
-                          <div className="text-sm text-slate-600 dark:text-slate-400 truncate font-mono">
-                            {event.id.substring(0, 16)}...
+                          <div className="text-xs font-mono text-slate-500 truncate mb-1">
+                            {event.id.substring(0, 32)}...
                           </div>
                           {event.content && (
-                            <div className="text-sm text-slate-700 dark:text-slate-300 truncate mt-1">
-                              {event.content.substring(0, 50)}
-                              {event.content.length > 50 ? '...' : ''}
+                            <div className="text-xs text-slate-400 truncate">
+                              {event.content.substring(0, 60)}
+                              {event.content.length > 60 ? '...' : ''}
                             </div>
                           )}
                         </button>
@@ -390,40 +396,42 @@ const Index = () => {
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Right Column - Event Details (8 parts) */}
-            <Card className="col-span-8 h-[calc(100vh-280px)]">
-              <CardContent className="p-0 h-full flex flex-col">
-                <div className="p-4 border-b bg-slate-50 dark:bg-slate-900/50">
-                  <h2 className="font-semibold text-lg">Event Details</h2>
+            <div className="col-span-8 bg-slate-900 border border-slate-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
+              <div className="flex flex-col h-full">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+                  <h2 className="font-mono text-xs uppercase tracking-wider text-slate-400">
+                    Event Inspector
+                  </h2>
                 </div>
-                <div className="overflow-y-auto flex-1 p-6">
+                <div className="overflow-y-auto flex-1 p-4">
                   {selectedEvent ? (
-                    <pre className="text-sm font-mono bg-slate-900 text-slate-100 p-6 rounded-lg overflow-x-auto">
+                    <pre className="text-xs font-mono text-slate-300 leading-relaxed">
                       {JSON.stringify(selectedEvent, null, 2)}
                     </pre>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-slate-500">
-                      <p>Select an event to view details</p>
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-xs font-mono text-slate-600">Select an event to inspect</p>
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className="mt-8 text-center text-sm text-slate-500">
+        <div className="mt-6 text-center">
           <a
             href="https://shakespeare.diy"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-violet-600 transition-colors"
+            className="text-xs font-mono text-slate-600 hover:text-slate-500 transition-colors"
           >
-            Vibed with Shakespeare
+            built with shakespeare
           </a>
         </div>
       </div>
