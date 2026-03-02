@@ -6,9 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, X, Trash2 } from 'lucide-react';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
+import { formatDistanceToNow } from 'date-fns';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
@@ -252,6 +253,27 @@ const Index = () => {
     setAuthorNpub(value);
     if (isConnected) {
       setTimeout(handleResubscribe, 100);
+    }
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    if (!ws || !isConnected) return;
+    
+    // Create a kind 5 deletion event
+    const deleteEvent = {
+      kind: 5,
+      content: 'Deleted via relay-explorer',
+      tags: [['e', eventId]],
+      created_at: Math.floor(Date.now() / 1000),
+    };
+    
+    // Publish the delete event to the relay
+    ws.send(JSON.stringify(['EVENT', deleteEvent]));
+    
+    // Optimistically remove from UI
+    setEvents((prev) => prev.filter(e => e.id !== eventId));
+    if (selectedEvent?.id === eventId) {
+      setSelectedEvent(null);
     }
   };
 
@@ -579,39 +601,60 @@ const Index = () => {
                   ) : (
                     <div className="divide-y divide-neutral-800">
                       {events.map((event) => (
-                        <button
+                        <div
                           key={event.id}
-                          onClick={() => setSelectedEvent(event)}
-                          className={`w-full text-left px-4 py-3 hover:bg-neutral-800/50 transition-colors ${
+                          className={`relative group ${
                             selectedEvent?.id === event.id
                               ? 'bg-neutral-800 border-l-2 border-neutral-500'
                               : ''
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-neutral-400">
-                              <span className="text-neutral-600">kind</span>
-                              <span className="text-neutral-500">{event.kind}</span>
-                            </span>
-                            <span className="text-xs font-mono text-neutral-600">
-                              {new Date(event.created_at * 1000).toLocaleTimeString('en-US', { 
-                                hour12: false,
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                          <div className="text-xs font-mono text-neutral-500 truncate mb-1">
-                            {event.id.substring(0, 32)}...
-                          </div>
-                          {event.content && (
-                            <div className="text-xs text-neutral-400 truncate">
-                              {event.content.substring(0, 60)}
-                              {event.content.length > 60 ? '...' : ''}
+                          <button
+                            onClick={() => setSelectedEvent(event)}
+                            className="w-full text-left px-4 py-3 hover:bg-neutral-800/50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <span className="inline-flex items-center gap-1.5 font-mono text-xs text-neutral-400">
+                                <span className="text-neutral-600">kind</span>
+                                <span className="text-neutral-500">{event.kind}</span>
+                              </span>
+                              <div className="text-right">
+                                <div className="text-xs font-mono text-neutral-600">
+                                  {new Date(event.created_at * 1000).toLocaleTimeString('en-US', { 
+                                    hour12: false,
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                  })}
+                                </div>
+                                <div className="text-[10px] font-mono text-neutral-700">
+                                  ({formatDistanceToNow(new Date(event.created_at * 1000), { addSuffix: true })})
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </button>
+                            <div className="text-xs font-mono text-neutral-500 truncate mb-1">
+                              {event.id.substring(0, 32)}...
+                            </div>
+                            {event.content && (
+                              <div className="text-xs text-neutral-400 truncate">
+                                {event.content.substring(0, 60)}
+                                {event.content.length > 60 ? '...' : ''}
+                              </div>
+                            )}
+                          </button>
+                          
+                          {/* Delete button on hover */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEvent(event.id);
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 bg-red-900/80 hover:bg-red-800 border border-red-700 rounded"
+                            title="Delete event (kind 5)"
+                          >
+                            <Trash2 className="h-3 w-3 text-red-300" />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
