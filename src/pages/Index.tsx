@@ -38,8 +38,21 @@ const Index = () => {
     description: 'Simple Nostr relay explorer to view events from any relay',
   });
 
-  // Load from localStorage
-  const [relayUrl, setRelayUrl] = useState(() => localStorage.getItem('relay-explorer:url') || '');
+  // Check for iframe/embed mode via URL parameters
+  const [iframeMode, setIframeMode] = useState(false);
+  const [iframeRelay, setIframeRelay] = useState<string | null>(null);
+
+  // Load from localStorage or URL params
+  const [relayUrl, setRelayUrl] = useState(() => {
+    // Check URL params first
+    const params = new URLSearchParams(window.location.search);
+    const relayParam = params.get('relay');
+    if (relayParam) {
+      return relayParam;
+    }
+    return localStorage.getItem('relay-explorer:url') || '';
+  });
+  
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [events, setEvents] = useState<NostrEvent[]>([]);
@@ -60,12 +73,24 @@ const Index = () => {
   const isConnected = connectionState === 'connected';
   const isConnecting = connectionState === 'connecting';
 
-  // Persist to localStorage when values change
+  // Initialize iframe mode
   useEffect(() => {
-    if (relayUrl) {
+    const params = new URLSearchParams(window.location.search);
+    const relayParam = params.get('relay');
+    
+    if (relayParam) {
+      setIframeMode(true);
+      setIframeRelay(relayParam);
+      setRelayUrl(relayParam);
+    }
+  }, []);
+
+  // Persist to localStorage when values change (skip in iframe mode)
+  useEffect(() => {
+    if (relayUrl && !iframeMode) {
       localStorage.setItem('relay-explorer:url', relayUrl);
     }
-  }, [relayUrl]);
+  }, [relayUrl, iframeMode]);
 
   useEffect(() => {
     if (authorNpub) {
@@ -84,6 +109,16 @@ const Index = () => {
       }
     };
   }, [ws]);
+
+  // Auto-connect in iframe mode
+  useEffect(() => {
+    if (iframeMode && iframeRelay && !isConnected && !isConnecting) {
+      // Small delay to ensure component is fully mounted
+      setTimeout(() => {
+        handleConnect();
+      }, 100);
+    }
+  }, [iframeMode, iframeRelay]);
 
   const buildFilter = (): NostrFilter => {
     const filter: NostrFilter = { limit: 500 };
@@ -244,45 +279,48 @@ const Index = () => {
     <div className="min-h-screen bg-neutral-950">
       <div className="container mx-auto p-6">
         {/* Header */}
-        <div className="mb-6 pb-4 border-b border-neutral-800">
-          <h1 className="text-2xl font-mono font-semibold text-neutral-100 mb-1">
-            relay-explorer
-          </h1>
-          <p className="text-sm text-neutral-500 font-mono">
-            WebSocket event inspector for Nostr relays
-          </p>
-        </div>
+        {!iframeMode && (
+          <div className="mb-6 pb-4 border-b border-neutral-800">
+            <h1 className="text-2xl font-mono font-semibold text-neutral-100 mb-1">
+              relay-explorer
+            </h1>
+            <p className="text-sm text-neutral-500 font-mono">
+              WebSocket event inspector for Nostr relays
+            </p>
+          </div>
+        )}
 
         {/* Connection Panel */}
-        <div className="mb-6 bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-          <div className="flex gap-3 mb-3">
-            <div className="flex-1 relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm font-mono pointer-events-none">
-                wss://
-              </span>
-              <Input
-                type="text"
-                placeholder="relay.ditto.pub"
-                value={relayUrl}
-                onChange={handleRelayUrlChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isValidUrl && !isConnected && !isConnecting) {
-                    handleConnect();
-                  }
-                }}
-                disabled={isConnected || isConnecting}
-                className="pl-16 h-10 bg-neutral-950 border-neutral-700 font-mono text-sm text-neutral-100"
-              />
+        {!iframeMode && (
+          <div className="mb-6 bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+            <div className="flex gap-3 mb-3">
+              <div className="flex-1 relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm font-mono pointer-events-none">
+                  wss://
+                </span>
+                <Input
+                  type="text"
+                  placeholder="relay.ditto.pub"
+                  value={relayUrl}
+                  onChange={handleRelayUrlChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && isValidUrl && !isConnected && !isConnecting) {
+                      handleConnect();
+                    }
+                  }}
+                  disabled={isConnected || isConnecting}
+                  className="pl-16 h-10 bg-neutral-950 border-neutral-700 font-mono text-sm text-neutral-100"
+                />
+              </div>
+              <Button
+                onClick={handleConnect}
+                disabled={!isValidUrl && !isConnected && !isConnecting}
+                className="h-10 px-6 font-mono text-sm"
+                variant={isConnected ? 'destructive' : 'default'}
+              >
+                {isConnecting ? 'CONNECTING...' : isConnected ? 'DISCONNECT' : 'CONNECT'}
+              </Button>
             </div>
-            <Button
-              onClick={handleConnect}
-              disabled={!isValidUrl && !isConnected && !isConnecting}
-              className="h-10 px-6 font-mono text-sm"
-              variant={isConnected ? 'destructive' : 'default'}
-            >
-              {isConnecting ? 'CONNECTING...' : isConnected ? 'DISCONNECT' : 'CONNECT'}
-            </Button>
-          </div>
 
           {/* Advanced Filters */}
           <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
@@ -394,13 +432,134 @@ const Index = () => {
               )}
             </CollapsibleContent>
           </Collapsible>
-        </div>
+          </div>
+        )}
+
+        {/* Iframe Mode Header */}
+        {iframeMode && (
+          <div className="mb-4 pb-3 border-b border-neutral-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-neutral-600 uppercase tracking-wide">Connected to</span>
+                <span className="text-xs font-mono text-neutral-400">{relayUrl}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* Filters in iframe mode */}
+                <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 text-xs font-mono text-neutral-400 hover:text-neutral-300 transition-colors">
+                      <span className="uppercase tracking-wider">Filters</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                </Collapsible>
+                <span className="text-xs font-mono text-neutral-600">{events.length} events</span>
+              </div>
+            </div>
+            
+            {/* Iframe mode filters */}
+            {showAdvanced && (
+              <div className="mt-3 pt-3 border-t border-neutral-800">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Author Filter */}
+                  <div className="space-y-1">
+                    <label htmlFor="author-npub-iframe" className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
+                      Authors
+                    </label>
+                    <Input
+                      id="author-npub-iframe"
+                      type="text"
+                      placeholder="npub1..."
+                      value={authorNpub}
+                      onChange={(e) => handleAuthorChange(e.target.value)}
+                      className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
+                    />
+                  </div>
+
+                  {/* Kinds Filter */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
+                      Kinds
+                    </label>
+                    <div className="flex gap-1.5">
+                      <div className="flex-1 relative">
+                        <Input
+                          type="text"
+                          placeholder="Search..."
+                          value={kindSearchQuery}
+                          onChange={(e) => {
+                            setKindSearchQuery(e.target.value);
+                            setShowKindDropdown(true);
+                          }}
+                          onFocus={() => setShowKindDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowKindDropdown(false), 200)}
+                          className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
+                        />
+                        {showKindDropdown && kindSearchQuery && filteredCommonKinds.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-neutral-900 border border-neutral-700 rounded-md shadow-xl max-h-48 overflow-y-auto">
+                            {filteredCommonKinds.map((kind) => (
+                              <button
+                                key={kind.value}
+                                onClick={() => handleAddKind(kind.value)}
+                                className="w-full text-left px-3 py-2 hover:bg-neutral-800 text-xs font-mono flex items-center justify-between text-neutral-300"
+                              >
+                                <span>{kind.label}</span>
+                                <span className="text-neutral-500">{kind.value}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <Input
+                        type="number"
+                        placeholder="#"
+                        value={customKind}
+                        onChange={(e) => setCustomKind(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddCustomKind()}
+                        className="h-8 w-12 bg-neutral-950 border-neutral-700 font-mono text-xs text-center text-neutral-100"
+                        min="0"
+                      />
+                      <Button
+                        onClick={handleAddCustomKind}
+                        disabled={!customKind || isNaN(parseInt(customKind))}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2 font-mono text-xs border-neutral-700"
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selected Kinds Pills */}
+                {selectedKinds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-neutral-800">
+                    {selectedKinds.sort((a, b) => a - b).map((kind) => (
+                      <button
+                        key={kind}
+                        onClick={() => handleRemoveKind(kind)}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-xs font-mono text-neutral-300 transition-colors"
+                      >
+                        <span className="text-neutral-500">{kind}</span>
+                        <span className="text-neutral-600">·</span>
+                        <span>{COMMON_KINDS.find(k => k.value === kind)?.label || 'Custom'}</span>
+                        <X className="h-3 w-3 ml-0.5 text-neutral-500" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Events Display - Fibonacci ratio columns (5:8) */}
         {(isConnected || isConnecting) && (
           <div className="grid grid-cols-13 gap-4">
             {/* Left Column - Events List (5 parts) */}
-            <div className="col-span-5 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
+            <div className={`col-span-5 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden ${iframeMode ? 'h-[calc(100vh-120px)]' : 'h-[calc(100vh-340px)]'}`}>
               <div className="flex flex-col h-full">
                 <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur">
                   <div className="flex items-center justify-between">
@@ -461,7 +620,7 @@ const Index = () => {
             </div>
 
             {/* Right Column - Event Details (8 parts) */}
-            <div className="col-span-8 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-[calc(100vh-340px)]">
+            <div className={`col-span-8 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden ${iframeMode ? 'h-[calc(100vh-120px)]' : 'h-[calc(100vh-340px)]'}`}>
               <div className="flex flex-col h-full">
                 <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur">
                   <h2 className="font-mono text-xs uppercase tracking-wider text-neutral-400">
@@ -485,16 +644,18 @@ const Index = () => {
         )}
 
         {/* Footer */}
-        <div className="mt-6 text-center">
-          <a
-            href="https://shakespeare.diy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-mono text-neutral-600 hover:text-neutral-500 transition-colors"
-          >
-            built with shakespeare
-          </a>
-        </div>
+        {!iframeMode && (
+          <div className="mt-6 text-center">
+            <a
+              href="https://shakespeare.diy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono text-neutral-600 hover:text-neutral-500 transition-colors"
+            >
+              built with shakespeare
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
