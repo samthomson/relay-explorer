@@ -298,15 +298,15 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900">
+    <div className="min-h-screen bg-slate-950">
       <div className="container mx-auto p-6">
         {/* Header */}
         {!iframeMode && (
-          <div className="mb-6 pb-4 border-b border-zinc-700">
-            <h1 className="text-2xl font-mono font-semibold text-zinc-100 mb-1">
+          <div className="mb-6 pb-4 border-b border-slate-700">
+            <h1 className="text-2xl font-mono font-semibold text-slate-50 mb-1">
               relay-explorer
             </h1>
-            <p className="text-sm text-zinc-400 font-mono">
+            <p className="text-sm text-slate-300 font-mono">
               WebSocket event inspector for Nostr relays
             </p>
           </div>
@@ -314,10 +314,10 @@ const Index = () => {
 
         {/* Connection Panel */}
         {!iframeMode && (
-          <div className="mb-6 bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+          <div className="mb-6 bg-slate-900 border border-slate-600 rounded-lg p-4">
             <div className="flex gap-3 mb-3">
               <div className="flex-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-mono pointer-events-none">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono pointer-events-none">
                   wss://
                 </span>
                 <Input
@@ -331,7 +331,7 @@ const Index = () => {
                     }
                   }}
                   disabled={isConnected || isConnecting}
-                  className="pl-16 h-10 bg-zinc-900 border-zinc-600 font-mono text-sm text-zinc-100"
+                  className="pl-16 h-10 bg-slate-800 border-slate-500 font-mono text-sm text-slate-50"
                 />
               </div>
               <Button
