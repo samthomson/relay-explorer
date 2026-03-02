@@ -298,15 +298,15 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-zinc-900">
       <div className="container mx-auto p-6">
         {/* Header */}
         {!iframeMode && (
-          <div className="mb-6 pb-4 border-b border-neutral-800">
-            <h1 className="text-2xl font-mono font-semibold text-neutral-100 mb-1">
+          <div className="mb-6 pb-4 border-b border-zinc-700">
+            <h1 className="text-2xl font-mono font-semibold text-zinc-100 mb-1">
               relay-explorer
             </h1>
-            <p className="text-sm text-neutral-500 font-mono">
+            <p className="text-sm text-zinc-400 font-mono">
               WebSocket event inspector for Nostr relays
             </p>
           </div>
@@ -314,10 +314,10 @@ const Index = () => {
 
         {/* Connection Panel */}
         {!iframeMode && (
-          <div className="mb-6 bg-neutral-900 border border-neutral-800 rounded-lg p-4">
+          <div className="mb-6 bg-zinc-800 border border-zinc-700 rounded-lg p-4">
             <div className="flex gap-3 mb-3">
               <div className="flex-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm font-mono pointer-events-none">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-mono pointer-events-none">
                   wss://
                 </span>
                 <Input
@@ -331,7 +331,7 @@ const Index = () => {
                     }
                   }}
                   disabled={isConnected || isConnecting}
-                  className="pl-16 h-10 bg-neutral-950 border-neutral-700 font-mono text-sm text-neutral-100"
+                  className="pl-16 h-10 bg-zinc-900 border-zinc-600 font-mono text-sm text-zinc-100"
                 />
               </div>
               <Button
@@ -599,27 +599,27 @@ const Index = () => {
                       <p className="text-xs font-mono text-neutral-600">Listening for events...</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-neutral-800">
+                    <div className="divide-y divide-zinc-700">
                       {events.map((event) => (
                         <div
                           key={event.id}
                           className={`relative group ${
                             selectedEvent?.id === event.id
-                              ? 'bg-neutral-800 border-l-2 border-neutral-500'
+                              ? 'bg-zinc-700 border-l-2 border-zinc-400'
                               : ''
                           }`}
                         >
                           <button
                             onClick={() => setSelectedEvent(event)}
-                            className="w-full text-left px-4 py-3 hover:bg-neutral-800/50 transition-colors"
+                            className="w-full text-left px-4 py-3 hover:bg-zinc-800/50 transition-colors"
                           >
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="inline-flex items-center gap-1.5 font-mono text-xs text-neutral-400">
-                                <span className="text-neutral-600">kind</span>
-                                <span className="text-neutral-500">{event.kind}</span>
+                              <span className="inline-flex items-center gap-1.5 font-mono text-xs text-zinc-300">
+                                <span className="text-zinc-400">kind</span>
+                                <span className="text-zinc-200">{event.kind}</span>
                               </span>
                               <div className="text-right">
-                                <div className="text-xs font-mono text-neutral-600">
+                                <div className="text-xs font-mono text-zinc-400">
                                   {new Date(event.created_at * 1000).toLocaleTimeString('en-US', { 
                                     hour12: false,
                                     hour: '2-digit',
@@ -627,32 +627,32 @@ const Index = () => {
                                     second: '2-digit'
                                   })}
                                 </div>
-                                <div className="text-[10px] font-mono text-neutral-700">
+                                <div className="text-[10px] font-mono text-zinc-500">
                                   ({formatDistanceToNow(new Date(event.created_at * 1000), { addSuffix: true })})
                                 </div>
                               </div>
                             </div>
-                            <div className="text-xs font-mono text-neutral-500 truncate mb-1">
+                            <div className="text-xs font-mono text-zinc-400 truncate mb-1">
                               {event.id.substring(0, 32)}...
                             </div>
                             {event.content && (
-                              <div className="text-xs text-neutral-400 truncate">
+                              <div className="text-xs text-zinc-300 truncate pr-8">
                                 {event.content.substring(0, 60)}
                                 {event.content.length > 60 ? '...' : ''}
                               </div>
                             )}
                           </button>
                           
-                          {/* Delete button on hover */}
+                          {/* Delete button on hover - bottom right */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteEvent(event.id);
                             }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 bg-red-900/80 hover:bg-red-800 border border-red-700 rounded"
+                            className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-900/90 hover:bg-red-800 border border-red-700 rounded"
                             title="Delete event (kind 5)"
                           >
-                            <Trash2 className="h-3 w-3 text-red-300" />
+                            <Trash2 className="h-3 w-3 text-red-200" />
                           </button>
                         </div>
                       ))}
