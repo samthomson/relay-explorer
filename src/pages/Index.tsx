@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
 interface NostrFilter {
+  ids?: string[];
   kinds?: number[];
   authors?: string[];
   limit?: number;
@@ -62,6 +63,7 @@ const Index = () => {
   
   // Advanced filter states with localStorage
   const [authorNpub, setAuthorNpub] = useState(() => localStorage.getItem('relay-explorer:author') || '');
+  const [eventId, setEventId] = useState(() => localStorage.getItem('relay-explorer:eventId') || '');
   const [selectedKinds, setSelectedKinds] = useState<number[]>(() => {
     const stored = localStorage.getItem('relay-explorer:kinds');
     return stored ? JSON.parse(stored) : [];
@@ -100,6 +102,12 @@ const Index = () => {
   }, [authorNpub]);
 
   useEffect(() => {
+    if (eventId) {
+      localStorage.setItem('relay-explorer:eventId', eventId);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
     localStorage.setItem('relay-explorer:kinds', JSON.stringify(selectedKinds));
   }, [selectedKinds]);
 
@@ -123,6 +131,11 @@ const Index = () => {
 
   const buildFilter = (): NostrFilter => {
     const filter: NostrFilter = { limit: 500 };
+    
+    // Add event ID filter if provided
+    if (eventId.trim()) {
+      filter.ids = [eventId.trim()];
+    }
     
     // Add kinds filter if any selected
     if (selectedKinds.length > 0) {
@@ -256,6 +269,13 @@ const Index = () => {
     }
   };
 
+  const handleEventIdChange = (value: string) => {
+    setEventId(value);
+    if (isConnected) {
+      setTimeout(handleResubscribe, 100);
+    }
+  };
+
   const handleDeleteEvent = (eventId: string) => {
     if (!ws || !isConnected) return;
     
@@ -352,17 +372,32 @@ const Index = () => {
               >
                 <span className="uppercase tracking-wider">Filters</span>
                 <ChevronDown className={`h-3 w-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-                {isConnected && (selectedKinds.length > 0 || authorNpub) && (
+                {isConnected && (selectedKinds.length > 0 || authorNpub || eventId) && (
                   <span className="text-neutral-600">·</span>
                 )}
-                {isConnected && (selectedKinds.length > 0 || authorNpub) && (
+                {isConnected && (selectedKinds.length > 0 || authorNpub || eventId) && (
                   <span className="text-neutral-600 text-xs">live update enabled</span>
                 )}
               </button>
             </CollapsibleTrigger>
             
             <CollapsibleContent className="mt-3 pt-3 border-t border-neutral-800">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                {/* Event ID Filter */}
+                <div className="space-y-1">
+                  <label htmlFor="event-id" className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
+                    Event ID
+                  </label>
+                  <Input
+                    id="event-id"
+                    type="text"
+                    placeholder="hex event id..."
+                    value={eventId}
+                    onChange={(e) => handleEventIdChange(e.target.value)}
+                    className="h-8 bg-slate-800 border-slate-500 font-mono text-xs text-slate-50"
+                  />
+                </div>
+
                 {/* Author Filter */}
                 <div className="space-y-1">
                   <label htmlFor="author-npub" className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
@@ -374,7 +409,7 @@ const Index = () => {
                     placeholder="npub1..."
                     value={authorNpub}
                     onChange={(e) => handleAuthorChange(e.target.value)}
-                    className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
+                    className="h-8 bg-slate-800 border-slate-500 font-mono text-xs text-slate-50"
                   />
                 </div>
 
@@ -482,7 +517,22 @@ const Index = () => {
             {/* Iframe mode filters */}
             {showAdvanced && (
               <div className="mt-3 pt-3 border-t border-neutral-800">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Event ID Filter */}
+                  <div className="space-y-1">
+                    <label htmlFor="event-id-iframe" className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
+                      Event ID
+                    </label>
+                    <Input
+                      id="event-id-iframe"
+                      type="text"
+                      placeholder="hex event id..."
+                      value={eventId}
+                      onChange={(e) => handleEventIdChange(e.target.value)}
+                      className="h-8 bg-neutral-950 border-neutral-700 font-mono text-xs text-neutral-100"
+                    />
+                  </div>
+
                   {/* Author Filter */}
                   <div className="space-y-1">
                     <label htmlFor="author-npub-iframe" className="text-xs font-mono text-neutral-500 uppercase tracking-wide">
