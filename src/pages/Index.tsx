@@ -10,6 +10,9 @@ import { ChevronDown, X, Trash2 } from 'lucide-react';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 import { formatDistanceToNow } from 'date-fns';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { LoginArea } from '@/components/auth/LoginArea';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
@@ -39,6 +42,9 @@ const Index = () => {
     title: 'Relay Note Explorer',
     description: 'Simple Nostr relay explorer to view events from any relay',
   });
+
+  const { user } = useCurrentUser();
+  const { mutate: publishEvent } = useNostrPublish();
 
   // Check for iframe/embed mode via URL parameters
   const [iframeMode, setIframeMode] = useState(false);
@@ -243,25 +249,26 @@ const Index = () => {
     }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!user) {
+      alert('You must be logged in to delete events');
+      return;
+    }
+
     if (!ws || !isConnected) return;
     
-    // Create a kind 5 deletion event
-    const deleteEvent = {
-      kind: 5,
-      content: 'Deleted via relay-explorer',
-      tags: [['e', eventId]],
-      created_at: Math.floor(Date.now() / 1000),
-    };
-    
-    // Publish the delete event to the relay
-    ws.send(JSON.stringify(['EVENT', deleteEvent]));
-    
-    // Optimistically remove from UI
+    // Optimistically remove from UI first
     setEvents((prev) => prev.filter(e => e.id !== eventId));
     if (selectedEvent?.id === eventId) {
       setSelectedEvent(null);
     }
+
+    // Publish signed kind 5 deletion event
+    publishEvent({
+      kind: 5,
+      content: 'Deleted via relay-explorer',
+      tags: [['e', eventId]],
+    });
   };
 
   const filteredCommonKinds = COMMON_KINDS.filter(k => 
@@ -290,12 +297,17 @@ const Index = () => {
         {/* Header */}
         {!iframeMode && (
           <div className="mb-6 pb-4 border-b border-slate-700">
-            <h1 className="text-2xl font-mono font-semibold text-slate-50 mb-1">
-              relay-explorer
-            </h1>
-            <p className="text-sm text-slate-300 font-mono">
-              WebSocket event inspector for Nostr relays
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-mono font-semibold text-slate-50 mb-1">
+                  relay-explorer
+                </h1>
+                <p className="text-sm text-slate-300 font-mono">
+                  WebSocket event inspector for Nostr relays
+                </p>
+              </div>
+              <LoginArea className="max-w-60" />
+            </div>
           </div>
         )}
 
@@ -660,17 +672,19 @@ const Index = () => {
                             )}
                           </button>
                           
-                          {/* Delete button on hover - bottom right */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteEvent(event.id);
-                            }}
-                            className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-900/90 hover:bg-red-800 border border-red-700 rounded"
-                            title="Delete event (kind 5)"
-                          >
-                            <Trash2 className="h-3 w-3 text-red-200" />
-                          </button>
+                          {/* Delete button on hover - bottom right (only show for logged in user's events) */}
+                          {user && event.pubkey === user.pubkey && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.id);
+                              }}
+                              className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-900/90 hover:bg-red-800 border border-red-700 rounded"
+                              title="Delete your event (kind 5)"
+                            >
+                              <Trash2 className="h-3 w-3 text-red-200" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
