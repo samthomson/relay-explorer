@@ -99,12 +99,16 @@ const Index = () => {
   useEffect(() => {
     if (authorNpub) {
       localStorage.setItem('relay-explorer:author', authorNpub);
+    } else {
+      localStorage.removeItem('relay-explorer:author');
     }
   }, [authorNpub]);
 
   useEffect(() => {
     if (eventId) {
       localStorage.setItem('relay-explorer:eventId', eventId);
+    } else {
+      localStorage.removeItem('relay-explorer:eventId');
     }
   }, [eventId]);
 
