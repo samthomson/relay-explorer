@@ -71,6 +71,7 @@ const Index = () => {
   const [customKind, setCustomKind] = useState('');
   const [kindSearchQuery, setKindSearchQuery] = useState('');
   const [showKindDropdown, setShowKindDropdown] = useState(false);
+  const [resubscribeTimer, setResubscribeTimer] = useState<NodeJS.Timeout | null>(null);
 
   const isValidUrl = relayUrl.length > 0;
   const isConnected = connectionState === 'connected';
@@ -224,6 +225,7 @@ const Index = () => {
       setSelectedEvent(null);
       // Send new subscription with updated filters
       const filter = buildFilter();
+      console.log('Resubscribing with filter:', filter);
       const subscription = JSON.stringify(['REQ', 'all-events', filter]);
       ws.send(subscription);
     }
@@ -237,7 +239,7 @@ const Index = () => {
     if (!selectedKinds.includes(kind)) {
       setSelectedKinds([...selectedKinds, kind]);
       if (isConnected) {
-        setTimeout(handleResubscribe, 100);
+        triggerResubscribe();
       }
     }
     setKindSearchQuery('');
@@ -247,7 +249,7 @@ const Index = () => {
   const handleRemoveKind = (kind: number) => {
     setSelectedKinds(selectedKinds.filter(k => k !== kind));
     if (isConnected) {
-      setTimeout(handleResubscribe, 100);
+      triggerResubscribe();
     }
   };
 
@@ -257,22 +259,32 @@ const Index = () => {
       setSelectedKinds([...selectedKinds, kind]);
       setCustomKind('');
       if (isConnected) {
-        setTimeout(handleResubscribe, 100);
+        triggerResubscribe();
       }
     }
+  };
+
+  const triggerResubscribe = () => {
+    if (resubscribeTimer) {
+      clearTimeout(resubscribeTimer);
+    }
+    const timer = setTimeout(() => {
+      handleResubscribe();
+    }, 500); // Increased debounce to 500ms
+    setResubscribeTimer(timer);
   };
 
   const handleAuthorChange = (value: string) => {
     setAuthorNpub(value);
     if (isConnected) {
-      setTimeout(handleResubscribe, 100);
+      triggerResubscribe();
     }
   };
 
   const handleEventIdChange = (value: string) => {
     setEventId(value);
     if (isConnected) {
-      setTimeout(handleResubscribe, 100);
+      triggerResubscribe();
     }
   };
 
