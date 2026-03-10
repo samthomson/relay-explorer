@@ -360,7 +360,7 @@ const Index = () => {
                     type="text"
                     placeholder="hex event id..."
                     value={eventId}
-                    onChange={(e) => handleEventIdChange(e.target.value)}
+                    onChange={(e) => setEventId(e.target.value)}
                     className="h-8 bg-slate-800 border-slate-500 font-mono text-xs text-slate-50"
                   />
                 </div>
@@ -375,7 +375,7 @@ const Index = () => {
                     type="text"
                     placeholder="npub1..."
                     value={authorNpub}
-                    onChange={(e) => handleAuthorChange(e.target.value)}
+                    onChange={(e) => setAuthorNpub(e.target.value)}
                     className="h-8 bg-slate-800 border-slate-500 font-mono text-xs text-slate-50"
                   />
                 </div>
