@@ -137,9 +137,12 @@ const Index = () => {
   const buildFilter = (): NostrFilter => {
     const filter: NostrFilter = { limit: 500 };
     
+    console.log('Building filter with eventId:', eventId, 'authorNpub:', authorNpub, 'selectedKinds:', selectedKinds);
+    
     // Add event ID filter if provided
     if (eventId.trim()) {
       filter.ids = [eventId.trim()];
+      console.log('Added event ID filter:', filter.ids);
     }
     
     // Add kinds filter if any selected
@@ -161,6 +164,7 @@ const Index = () => {
       }
     }
     
+    console.log('Final filter:', filter);
     return filter;
   };
 
@@ -286,9 +290,13 @@ const Index = () => {
   };
 
   const handleEventIdChange = (value: string) => {
+    console.log('Event ID changed to:', value);
     setEventId(value);
     if (isConnected) {
+      console.log('Triggering resubscribe because connected');
       triggerResubscribe();
+    } else {
+      console.log('Not resubscribing - not connected');
     }
   };
 
