@@ -61,17 +61,13 @@ const Index = () => {
   const [selectedEvent, setSelectedEvent] = useState<NostrEvent | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Advanced filter states with localStorage
-  const [authorNpub, setAuthorNpub] = useState(() => localStorage.getItem('relay-explorer:author') || '');
-  const [eventId, setEventId] = useState(() => localStorage.getItem('relay-explorer:eventId') || '');
-  const [selectedKinds, setSelectedKinds] = useState<number[]>(() => {
-    const stored = localStorage.getItem('relay-explorer:kinds');
-    return stored ? JSON.parse(stored) : [];
-  });
+  // Advanced filter states - NO localStorage for filters
+  const [authorNpub, setAuthorNpub] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [selectedKinds, setSelectedKinds] = useState<number[]>([]);
   const [customKind, setCustomKind] = useState('');
   const [kindSearchQuery, setKindSearchQuery] = useState('');
   const [showKindDropdown, setShowKindDropdown] = useState(false);
-  const [resubscribeTimer, setResubscribeTimer] = useState<NodeJS.Timeout | null>(null);
 
   const isValidUrl = relayUrl.length > 0;
   const isConnected = connectionState === 'connected';
@@ -96,25 +92,25 @@ const Index = () => {
     }
   }, [relayUrl, iframeMode]);
 
+  // Auto-resubscribe when filters change
   useEffect(() => {
-    if (authorNpub) {
-      localStorage.setItem('relay-explorer:author', authorNpub);
-    } else {
-      localStorage.removeItem('relay-explorer:author');
+    if (ws && isConnected) {
+      const timer = setTimeout(() => {
+        // Close old subscription
+        ws.send(JSON.stringify(['CLOSE', 'all-events']));
+        // Clear events
+        setEvents([]);
+        setSelectedEvent(null);
+        // Build new filter
+        const filter = buildFilter();
+        console.log('AUTO-RESUBSCRIBE with filter:', filter);
+        // Send new subscription
+        ws.send(JSON.stringify(['REQ', 'all-events', filter]));
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
-  }, [authorNpub]);
-
-  useEffect(() => {
-    if (eventId) {
-      localStorage.setItem('relay-explorer:eventId', eventId);
-    } else {
-      localStorage.removeItem('relay-explorer:eventId');
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    localStorage.setItem('relay-explorer:kinds', JSON.stringify(selectedKinds));
-  }, [selectedKinds]);
+  }, [eventId, authorNpub, selectedKinds, isConnected, ws]);
 
   useEffect(() => {
     return () => {
@@ -135,22 +131,19 @@ const Index = () => {
   }, [iframeMode, iframeRelay]);
 
   const buildFilter = (): NostrFilter => {
-    const filter: NostrFilter = { limit: 500 };
+    const filter: NostrFilter = {};
     
-    console.log('Building filter with eventId:', eventId, 'authorNpub:', authorNpub, 'selectedKinds:', selectedKinds);
-    
-    // Add event ID filter if provided
+    // Event ID - EXACT match only
     if (eventId.trim()) {
       filter.ids = [eventId.trim()];
-      console.log('Added event ID filter:', filter.ids);
     }
     
-    // Add kinds filter if any selected
+    // Kinds - only if selected
     if (selectedKinds.length > 0) {
       filter.kinds = selectedKinds;
     }
     
-    // Add author filter if npub provided
+    // Author - only if provided
     if (authorNpub.trim()) {
       try {
         const decoded = nip19.decode(authorNpub.trim());
@@ -164,7 +157,9 @@ const Index = () => {
       }
     }
     
-    console.log('Final filter:', filter);
+    // Always add limit
+    filter.limit = 500;
+    
     return filter;
   };
 
@@ -224,21 +219,6 @@ const Index = () => {
     setWs(websocket);
   };
 
-  const handleResubscribe = () => {
-    if (ws && isConnected) {
-      // Close existing subscription
-      ws.send(JSON.stringify(['CLOSE', 'all-events']));
-      // Clear events
-      setEvents([]);
-      setSelectedEvent(null);
-      // Send new subscription with updated filters
-      const filter = buildFilter();
-      console.log('Resubscribing with filter:', filter);
-      const subscription = JSON.stringify(['REQ', 'all-events', filter]);
-      ws.send(subscription);
-    }
-  };
-
   const handleRelayUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRelayUrl(e.target.value);
   };
@@ -246,9 +226,6 @@ const Index = () => {
   const handleAddKind = (kind: number) => {
     if (!selectedKinds.includes(kind)) {
       setSelectedKinds([...selectedKinds, kind]);
-      if (isConnected) {
-        triggerResubscribe();
-      }
     }
     setKindSearchQuery('');
     setShowKindDropdown(false);
@@ -256,9 +233,6 @@ const Index = () => {
 
   const handleRemoveKind = (kind: number) => {
     setSelectedKinds(selectedKinds.filter(k => k !== kind));
-    if (isConnected) {
-      triggerResubscribe();
-    }
   };
 
   const handleAddCustomKind = () => {
@@ -266,37 +240,6 @@ const Index = () => {
     if (!isNaN(kind) && kind >= 0 && !selectedKinds.includes(kind)) {
       setSelectedKinds([...selectedKinds, kind]);
       setCustomKind('');
-      if (isConnected) {
-        triggerResubscribe();
-      }
-    }
-  };
-
-  const triggerResubscribe = () => {
-    if (resubscribeTimer) {
-      clearTimeout(resubscribeTimer);
-    }
-    const timer = setTimeout(() => {
-      handleResubscribe();
-    }, 500); // Increased debounce to 500ms
-    setResubscribeTimer(timer);
-  };
-
-  const handleAuthorChange = (value: string) => {
-    setAuthorNpub(value);
-    if (isConnected) {
-      triggerResubscribe();
-    }
-  };
-
-  const handleEventIdChange = (value: string) => {
-    console.log('Event ID changed to:', value);
-    setEventId(value);
-    if (isConnected) {
-      console.log('Triggering resubscribe because connected');
-      triggerResubscribe();
-    } else {
-      console.log('Not resubscribing - not connected');
     }
   };
 
