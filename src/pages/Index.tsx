@@ -505,6 +505,7 @@ const Index = () => {
                   </CollapsibleTrigger>
                 </Collapsible>
                 <span className="text-xs font-mono text-neutral-600">{events.length} events</span>
+                <LoginArea className="max-w-40" />
               </div>
             </div>
             
