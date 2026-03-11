@@ -11,7 +11,6 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 import { formatDistanceToNow } from 'date-fns';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { LoginArea } from '@/components/auth/LoginArea';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected';
@@ -44,7 +43,6 @@ const Index = () => {
   });
 
   const { user } = useCurrentUser();
-  const { mutate: publishEvent } = useNostrPublish();
 
   // Check for iframe/embed mode via URL parameters
   const [iframeMode, setIframeMode] = useState(false);
@@ -257,23 +255,35 @@ const Index = () => {
 
     if (!ws || !isConnected) return;
 
-    // Publish signed kind 5 deletion event
-    publishEvent({
-      kind: 5,
-      content: 'Deleted via relay-explorer',
-      tags: [['e', eventId]],
-    });
+    try {
+      // Create and sign deletion event WITHOUT client tag
+      const unsignedEvent = {
+        kind: 5,
+        content: 'Deleted via relay-explorer',
+        tags: [['e', eventId]],
+        created_at: Math.floor(Date.now() / 1000),
+      };
 
-    // Requery after a short delay to see if relay actually deleted it
-    setTimeout(() => {
-      if (ws && isConnected) {
-        ws.send(JSON.stringify(['CLOSE', 'all-events']));
-        setEvents([]);
-        setSelectedEvent(null);
-        const filter = buildFilter();
-        ws.send(JSON.stringify(['REQ', 'all-events', filter]));
-      }
-    }, 500);
+      const signedEvent = await user.signer.signEvent(unsignedEvent);
+      
+      console.log('Sending deletion event:', signedEvent);
+      
+      // Send directly to the connected relay via WebSocket
+      ws.send(JSON.stringify(['EVENT', signedEvent]));
+
+      // Requery after a short delay to see if relay actually deleted it
+      setTimeout(() => {
+        if (ws && isConnected) {
+          ws.send(JSON.stringify(['CLOSE', 'all-events']));
+          setEvents([]);
+          setSelectedEvent(null);
+          const filter = buildFilter();
+          ws.send(JSON.stringify(['REQ', 'all-events', filter]));
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+    }
   };
 
   const filteredCommonKinds = COMMON_KINDS.filter(k => 
