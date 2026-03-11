@@ -256,12 +256,6 @@ const Index = () => {
     }
 
     if (!ws || !isConnected) return;
-    
-    // Optimistically remove from UI first
-    setEvents((prev) => prev.filter(e => e.id !== eventId));
-    if (selectedEvent?.id === eventId) {
-      setSelectedEvent(null);
-    }
 
     // Publish signed kind 5 deletion event
     publishEvent({
@@ -269,6 +263,17 @@ const Index = () => {
       content: 'Deleted via relay-explorer',
       tags: [['e', eventId]],
     });
+
+    // Requery after a short delay to see if relay actually deleted it
+    setTimeout(() => {
+      if (ws && isConnected) {
+        ws.send(JSON.stringify(['CLOSE', 'all-events']));
+        setEvents([]);
+        setSelectedEvent(null);
+        const filter = buildFilter();
+        ws.send(JSON.stringify(['REQ', 'all-events', filter]));
+      }
+    }, 500);
   };
 
   const filteredCommonKinds = COMMON_KINDS.filter(k => 
