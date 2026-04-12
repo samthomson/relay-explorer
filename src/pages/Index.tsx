@@ -194,9 +194,39 @@ const Index = () => {
       websocket.send(subscription);
     };
 
-    websocket.onmessage = (msg) => {
+    websocket.onmessage = async (msg) => {
       try {
         const data = JSON.parse(msg.data);
+        
+        // Handle AUTH challenge (NIP-42)
+        if (data[0] === 'AUTH' && data[1]) {
+          const challenge = data[1];
+          console.log('Received AUTH challenge:', challenge);
+          
+          if (user && user.signer) {
+            try {
+              // Sign NIP-42 auth event
+              const authEvent = await user.signer.signEvent({
+                kind: 22242,
+                content: '',
+                tags: [
+                  ['relay', url],
+                  ['challenge', challenge],
+                ],
+                created_at: Math.floor(Date.now() / 1000),
+              });
+              
+              console.log('Sending AUTH response:', authEvent);
+              websocket.send(JSON.stringify(['AUTH', authEvent]));
+            } catch (e) {
+              console.error('Failed to sign AUTH event:', e);
+            }
+          } else {
+            console.warn('AUTH challenge received but user not logged in');
+          }
+        }
+        
+        // Handle events
         if (data[0] === 'EVENT' && data[2]) {
           setEvents((prev) => {
             // Avoid duplicates
@@ -205,6 +235,16 @@ const Index = () => {
             }
             return [...prev, data[2]].sort((a, b) => b.created_at - a.created_at);
           });
+        }
+        
+        // Handle CLOSED messages
+        if (data[0] === 'CLOSED' && data[2]) {
+          console.log('Subscription closed:', data[1], 'reason:', data[2]);
+        }
+        
+        // Handle OK responses
+        if (data[0] === 'OK') {
+          console.log('OK response:', data);
         }
       } catch (e) {
         console.error('Failed to parse message:', e);
