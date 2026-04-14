@@ -62,6 +62,7 @@ const Index = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [connectionError, setConnectionError] = useState<string>('');
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [connectionTimeout, setConnectionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [events, setEvents] = useState<NostrEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<NostrEvent | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -174,6 +175,9 @@ const Index = () => {
       if (ws) {
         ws.close();
       }
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+      }
       setWs(null);
       setConnectionState('disconnected');
       setConnectionError('');
@@ -191,13 +195,26 @@ const Index = () => {
 
     const websocket = new WebSocket(url);
 
+    // Set connection timeout (10 seconds)
+    const timeout = setTimeout(() => {
+      if (websocket.readyState === WebSocket.CONNECTING) {
+        console.log('⏱️ Connection timeout - closing');
+        websocket.close();
+        setConnectionState('disconnected');
+        setConnectionError('Connection timeout - relay took too long to respond');
+      }
+    }, 10000);
+    
+    setConnectionTimeout(timeout);
+
     websocket.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('✅ WebSocket connected successfully');
+      clearTimeout(timeout);
       setConnectionState('connected');
       setConnectionError('');
       // Subscribe with filter
       const filter = buildFilter();
-      console.log('Sending REQ with filter:', filter);
+      console.log('📤 Sending REQ with filter:', filter);
       const subscription = JSON.stringify(['REQ', 'all-events', filter]);
       websocket.send(subscription);
     };
@@ -276,15 +293,21 @@ const Index = () => {
     };
 
     websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setConnectionError('Connection failed - check relay URL');
+      console.error('❌ WebSocket error:', error);
+      clearTimeout(timeout);
+      setConnectionError('Connection failed - check relay URL or network');
       setConnectionState('disconnected');
     };
 
     websocket.onclose = (event) => {
-      console.log('WebSocket closed:', event.code, event.reason);
-      if (event.code !== 1000) {
-        setConnectionError(`Connection closed: ${event.reason || 'Unknown reason'}`);
+      console.log('🔌 WebSocket closed - code:', event.code, 'reason:', event.reason || 'none', 'clean:', event.wasClean);
+      clearTimeout(timeout);
+      
+      // Error codes: 1000 = normal, 1006 = abnormal (network/DNS issue)
+      if (event.code === 1006) {
+        setConnectionError('Connection failed - DNS/network error (is the relay reachable?)');
+      } else if (event.code !== 1000) {
+        setConnectionError(`Connection closed (code ${event.code}): ${event.reason || 'Unknown reason'}`);
       }
       setConnectionState('disconnected');
     };
