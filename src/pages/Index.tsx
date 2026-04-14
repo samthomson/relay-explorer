@@ -205,11 +205,12 @@ const Index = () => {
     websocket.onmessage = async (msg) => {
       try {
         const data = JSON.parse(msg.data);
+        console.log('📨 Received message:', data);
         
         // Handle AUTH challenge (NIP-42)
         if (data[0] === 'AUTH' && data[1]) {
           const challenge = data[1];
-          console.log('Received AUTH challenge:', challenge);
+          console.log('🔐 AUTH challenge received:', challenge);
           
           if (user && user.signer) {
             try {
@@ -224,18 +225,21 @@ const Index = () => {
                 created_at: Math.floor(Date.now() / 1000),
               });
               
-              console.log('Sending AUTH response:', authEvent);
+              console.log('🔑 Sending AUTH response:', authEvent);
               websocket.send(JSON.stringify(['AUTH', authEvent]));
             } catch (e) {
-              console.error('Failed to sign AUTH event:', e);
+              console.error('❌ Failed to sign AUTH event:', e);
+              setConnectionError('Failed to authenticate - check your signer');
             }
           } else {
-            console.warn('AUTH challenge received but user not logged in');
+            console.warn('⚠️ AUTH challenge received but user not logged in');
+            setConnectionError('Authentication required - please log in');
           }
         }
         
         // Handle events
         if (data[0] === 'EVENT' && data[2]) {
+          console.log('📄 Event received:', data[2].kind, data[2].id.substring(0, 8));
           setEvents((prev) => {
             // Avoid duplicates
             if (prev.some(e => e.id === data[2].id)) {
@@ -246,16 +250,28 @@ const Index = () => {
         }
         
         // Handle CLOSED messages
-        if (data[0] === 'CLOSED' && data[2]) {
-          console.log('Subscription closed:', data[1], 'reason:', data[2]);
+        if (data[0] === 'CLOSED') {
+          console.log('🚫 Subscription closed:', data[1], 'reason:', data[2]);
+          setConnectionError(`Subscription closed: ${data[2] || 'Unknown reason'}`);
         }
         
         // Handle OK responses
         if (data[0] === 'OK') {
-          console.log('OK response:', data);
+          console.log('✅ OK response:', data);
+        }
+        
+        // Handle NOTICE messages
+        if (data[0] === 'NOTICE') {
+          console.log('📢 NOTICE:', data[1]);
+          setConnectionError(`Relay notice: ${data[1]}`);
+        }
+
+        // Handle EOSE
+        if (data[0] === 'EOSE') {
+          console.log('✔️ EOSE - End of stored events for subscription:', data[1]);
         }
       } catch (e) {
-        console.error('Failed to parse message:', e);
+        console.error('❌ Failed to parse message:', e, 'raw:', msg.data);
       }
     };
 
