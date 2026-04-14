@@ -60,6 +60,7 @@ const Index = () => {
   });
   
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  const [connectionError, setConnectionError] = useState<string>('');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [events, setEvents] = useState<NostrEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<NostrEvent | null>(null);
@@ -175,6 +176,7 @@ const Index = () => {
       }
       setWs(null);
       setConnectionState('disconnected');
+      setConnectionError('');
       setEvents([]);
       setSelectedEvent(null);
       return;
@@ -183,13 +185,19 @@ const Index = () => {
     // Connect
     const url = relayUrl.startsWith('wss://') ? relayUrl : `wss://${relayUrl}`;
     setConnectionState('connecting');
+    setConnectionError('');
+    
+    console.log('Connecting to:', url);
 
     const websocket = new WebSocket(url);
 
     websocket.onopen = () => {
+      console.log('WebSocket connected');
       setConnectionState('connected');
+      setConnectionError('');
       // Subscribe with filter
       const filter = buildFilter();
+      console.log('Sending REQ with filter:', filter);
       const subscription = JSON.stringify(['REQ', 'all-events', filter]);
       websocket.send(subscription);
     };
@@ -253,10 +261,15 @@ const Index = () => {
 
     websocket.onerror = (error) => {
       console.error('WebSocket error:', error);
+      setConnectionError('Connection failed - check relay URL');
       setConnectionState('disconnected');
     };
 
-    websocket.onclose = () => {
+    websocket.onclose = (event) => {
+      console.log('WebSocket closed:', event.code, event.reason);
+      if (event.code !== 1000) {
+        setConnectionError(`Connection closed: ${event.reason || 'Unknown reason'}`);
+      }
       setConnectionState('disconnected');
     };
 
@@ -397,6 +410,13 @@ const Index = () => {
                 {isConnecting ? 'CONNECTING...' : isConnected ? 'DISCONNECT' : 'CONNECT'}
               </Button>
             </div>
+
+            {/* Connection Error */}
+            {connectionError && (
+              <div className="mt-3 p-3 bg-red-950/50 border border-red-800 rounded text-xs font-mono text-red-300">
+                ⚠ {connectionError}
+              </div>
+            )}
 
           {/* Advanced Filters */}
           <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
