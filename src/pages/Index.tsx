@@ -186,8 +186,12 @@ const Index = () => {
       return;
     }
 
-    // Connect
-    const url = relayUrl.startsWith('wss://') ? relayUrl : `wss://${relayUrl}`;
+    // Connect - support both ws:// and wss://
+    let url = relayUrl;
+    if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+      // Auto-detect: use ws:// for .local domains, wss:// for everything else
+      url = url.includes('.local') ? `ws://${url}` : `wss://${url}`;
+    }
     setConnectionState('connecting');
     setConnectionError('');
     
@@ -424,11 +428,11 @@ const Index = () => {
             <div className="flex gap-3 mb-3">
               <div className="flex-1 relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono pointer-events-none">
-                  wss://
+                  {relayUrl.includes('.local') || relayUrl.startsWith('ws://') ? 'ws://' : 'wss://'}
                 </span>
                 <Input
                   type="text"
-                  placeholder="relay.ditto.pub"
+                  placeholder="relay.ditto.pub (or chapartest.local)"
                   value={relayUrl}
                   onChange={handleRelayUrlChange}
                   onKeyDown={(e) => {
